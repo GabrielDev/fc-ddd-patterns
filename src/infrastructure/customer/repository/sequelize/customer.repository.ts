@@ -1,7 +1,10 @@
 import Customer from "../../../../domain/customer/entity/customer";
 import Address from "../../../../domain/customer/value-object/address";
 import CustomerRepositoryInterface from "../../../../domain/customer/repository/customer-repository.interface";
+import SendMessageWhenCustomerIsCreatedHandler from "../../../../domain/customer/event/handler/send-message-when-customer-is-created.handler";
 import CustomerModel from "./customer.model";
+import { eventDispatcherInstance } from "../../../../domain/@shared/event/event-dispatcher";
+import CustomerCreatedEvent from "../../../../domain/customer/event/customer-created.event";
 
 export default class CustomerRepository implements CustomerRepositoryInterface {
   async create(entity: Customer): Promise<void> {
@@ -15,6 +18,14 @@ export default class CustomerRepository implements CustomerRepositoryInterface {
       active: entity.isActive(),
       rewardPoints: entity.rewardPoints,
     });
+
+    const eventHandler = new SendMessageWhenCustomerIsCreatedHandler();
+    eventDispatcherInstance.register("CustomerCreatedEvent", eventHandler)
+
+    const customerCreatedEvent1 = new CustomerCreatedEvent("Esse é o primeiro console.log do evento: CustomerCreated")
+    const customerCreatedEvent2 = new CustomerCreatedEvent("Esse é o segundo console.log do evento: CustomerCreated")
+    eventDispatcherInstance.notify(customerCreatedEvent1);
+    eventDispatcherInstance.notify(customerCreatedEvent2);
   }
 
   async update(entity: Customer): Promise<void> {

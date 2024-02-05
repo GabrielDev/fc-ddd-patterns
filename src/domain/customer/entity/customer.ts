@@ -1,3 +1,6 @@
+import { eventDispatcherInstance } from "../../@shared/event/event-dispatcher";
+import AddressChangedEvent from "../event/address-changed.event";
+import SendMessageWhenAddressIsChangedHandler from "../event/handler/send-message-when-address-is-changed.handler";
 import Address from "../value-object/address";
 
 export default class Customer {
@@ -11,6 +14,7 @@ export default class Customer {
     this._id = id;
     this._name = name;
     this.validate();
+    this.registerEvent();
   }
 
   get id(): string {
@@ -23,6 +27,11 @@ export default class Customer {
 
   get rewardPoints(): number {
     return this._rewardPoints;
+  }
+
+  private registerEvent() {
+    const eventHandler = new SendMessageWhenAddressIsChangedHandler();
+    eventDispatcherInstance.register("AddressChangedEvent", eventHandler)
   }
 
   validate() {
@@ -45,6 +54,13 @@ export default class Customer {
   
   changeAddress(address: Address) {
     this._address = address;
+    this.notify();
+  }
+
+  private notify() {
+    const address = `${this._address._street}, ${this._address._number}, ${this._address._city} - ${this._address._zip}`
+    const addressChangedEvent = new AddressChangedEvent(`Endereço do cliente: ${this._id}, ${this._name} alterado para: ${address}.`);
+    eventDispatcherInstance.notify(addressChangedEvent)
   }
 
   isActive(): boolean {

@@ -23,48 +23,81 @@ describe("Customer repository test", () => {
     await sequelize.close();
   });
 
-  it("should create a customer", async () => {
-    const customerRepository = new CustomerRepository();
-    const customer = new Customer("123", "Customer 1");
-    const address = new Address("Street 1", 1, "Zipcode 1", "City 1");
-    customer.Address = address;
-    await customerRepository.create(customer);
+  describe("when a customer is created", () => {
+    const sut = async () => {
+      const customerRepository = new CustomerRepository();
+      const customer = new Customer("123", "Customer 1");
+      const address = new Address("Street 1", 1, "Zipcode 1", "City 1");
+      customer.Address = address;
+      await customerRepository.create(customer);
 
-    const customerModel = await CustomerModel.findOne({ where: { id: "123" } });
+      return customer
+    }
 
-    expect(customerModel.toJSON()).toStrictEqual({
-      id: "123",
-      name: customer.name,
-      active: customer.isActive(),
-      rewardPoints: customer.rewardPoints,
-      street: address.street,
-      number: address.number,
-      zipcode: address.zip,
-      city: address.city,
+    it("should persist a customer", async () => {
+      const customer = await sut();
+      const address = customer.Address;
+
+      const customerModel = await CustomerModel.findOne({ where: { id: "123" } });
+
+      expect(customerModel.toJSON()).toStrictEqual({
+        id: "123",
+        name: customer.name,
+        active: customer.isActive(),
+        rewardPoints: customer.rewardPoints,
+        street: address.street,
+        number: address.number,
+        zipcode: address.zip,
+        city: address.city,
+      });
     });
-  });
+  
+    it("should notify all event handlers", async () => {
+      const spyLog = jest.spyOn(console, "log")
 
-  it("should update a customer", async () => {
-    const customerRepository = new CustomerRepository();
-    const customer = new Customer("123", "Customer 1");
-    const address = new Address("Street 1", 1, "Zipcode 1", "City 1");
-    customer.Address = address;
-    await customerRepository.create(customer);
+      await sut();
 
-    customer.changeName("Customer 2");
-    await customerRepository.update(customer);
-    const customerModel = await CustomerModel.findOne({ where: { id: "123" } });
+      expect(spyLog).toHaveBeenCalledWith("Esse é o primeiro console.log do evento: CustomerCreated")
+      expect(spyLog).toHaveBeenCalledWith("Esse é o segundo console.log do evento: CustomerCreated")
+    })
+  })
 
-    expect(customerModel.toJSON()).toStrictEqual({
-      id: "123",
-      name: customer.name,
-      active: customer.isActive(),
-      rewardPoints: customer.rewardPoints,
-      street: address.street,
-      number: address.number,
-      zipcode: address.zip,
-      city: address.city,
+  describe('when a customer is changed', () => {
+    it("should update a customer", async () => {
+      const customerRepository = new CustomerRepository();
+      const customer = new Customer("123", "Customer 1");
+      const address = new Address("Street 1", 1, "Zipcode 1", "City 1");
+      customer.Address = address;
+      await customerRepository.create(customer);
+
+      customer.changeName("Customer 2");
+      await customerRepository.update(customer);
+      const customerModel = await CustomerModel.findOne({ where: { id: "123" } });
+
+      expect(customerModel.toJSON()).toStrictEqual({
+        id: "123",
+        name: customer.name,
+        active: customer.isActive(),
+        rewardPoints: customer.rewardPoints,
+        street: address.street,
+        number: address.number,
+        zipcode: address.zip,
+        city: address.city,
+      });
     });
+
+    it('should notify the changed address', async () => {
+      const spyLog = jest.spyOn(console, 'log');
+      const customer = new Customer("123", "Customer 1");
+      const address = new Address("Street 1", 1, "Zipcode 1", "City 1");
+      
+      customer.changeAddress(address)
+
+      const addressChanged = `${address.street}, ${address.number}, ${address.city} - ${address.zip}`
+      const result = `Endereço do cliente: ${customer.id}, ${customer.name} alterado para: ${addressChanged}.`
+
+      expect(spyLog).toHaveBeenCalledWith(result)
+    })
   });
 
   it("should find a customer", async () => {
